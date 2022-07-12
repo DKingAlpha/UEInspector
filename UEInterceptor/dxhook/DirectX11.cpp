@@ -1,5 +1,5 @@
 #include "DirectX11.h"
-
+#include "DX11Hook.h"
 #include <dxgi.h>
 #include <d3d11.h>
 
@@ -61,8 +61,10 @@ void DisableHook(uint16_t Index) {
 
 void DestroyHookAndMem() {
 	MH_DisableHook(MH_ALL_HOOKS);
+	MH_Uninitialize();
 	free(MethodsTable);
 	MethodsTable = NULL;
+	SetWindowLongPtr(ProcessInfo::Hwnd, GWLP_WNDPROC, (__int3264)(LONG_PTR)ProcessInfo::WndProc);
 }
 
 namespace DirectX11 {

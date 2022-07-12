@@ -2,6 +2,7 @@
 #include "DirectX11.h"
 
 #include "../gui/MainMenu.h"
+#include "../res/droidsans.cpp"
 
 #include "imgui.h"
 #include "imgui_impl_dx11.h"
@@ -10,15 +11,16 @@
 #include <psapi.h>
 #include <tchar.h>
 
-bool ShowMenu = false;
+bool ShowMenu = true;
 bool ImGui_Initialised = false;
 
-bool g_StopImguiHookThread = false;
+HANDLE g_StopMutex = NULL;
 
 void StopImguiHookThread()
 {
-	g_StopImguiHookThread = true;
-	Sleep(1000);
+	g_StopMutex = CreateMutex(NULL, FALSE, NULL);
+	WaitForSingleObject(g_StopMutex, 5000);	// allow up to 5s for graceful exit.
+	CloseHandle(g_StopMutex);
 }
 
 namespace ProcessInfo {
@@ -61,12 +63,13 @@ LRESULT APIENTRY WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 }
 
 HRESULT APIENTRY MJPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags) {
+	static ImFont* font = nullptr;
 	if (!ImGui_Initialised) {
 		if (SUCCEEDED(pSwapChain->GetDevice(__uuidof(ID3D11Device), (void**)&DirectX11Interface::Device))){
 			ImGui::CreateContext();
 
 			ImGuiIO& io = ImGui::GetIO(); (void)io;
-			ImGui::GetIO().WantCaptureMouse || ImGui::GetIO().WantTextInput || ImGui::GetIO().WantCaptureKeyboard;
+			// ImGui::GetIO().WantCaptureMouse || ImGui::GetIO().WantTextInput || ImGui::GetIO().WantCaptureKeyboard;
 			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
 			DirectX11Interface::Device->GetImmediateContext(&DirectX11Interface::DeviceContext);
@@ -83,12 +86,12 @@ HRESULT APIENTRY MJPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT F
 			ImGui_ImplWin32_Init(WindowHwnd);
 			ImGui_ImplDX11_Init(DirectX11Interface::Device, DirectX11Interface::DeviceContext);
 			ImGui_ImplDX11_CreateDeviceObjects();
-			ImGui::GetIO().ImeWindowHandle = ProcessInfo::Hwnd;
+			io.ImeWindowHandle = ProcessInfo::Hwnd;
 			ProcessInfo::WndProc = (WNDPROC)SetWindowLongPtr(ProcessInfo::Hwnd, GWLP_WNDPROC, (__int3264)(LONG_PTR)WndProc);
 			ImGui_Initialised = true;
 		}
 	}
-	if (GetAsyncKeyState(VK_INSERT) & 1)
+	if (GetAsyncKeyState(OPEN_MENU_KEY) & 1)
 		ShowMenu = !ShowMenu;
 	
 	ImGui_ImplDX11_NewFrame();
@@ -96,7 +99,7 @@ HRESULT APIENTRY MJPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT F
 	ImGui::NewFrame();
 	ImGui::GetIO().MouseDrawCursor = ShowMenu;
 	if (ShowMenu == true) {
-		DrawMainMenu();
+		ShowMenu = DrawMainMenu();
 	}
 	ImGui::EndFrame();
 	ImGui::Render();
@@ -143,7 +146,7 @@ HRESULT APIENTRY MJResizeBuffers(IDXGISwapChain* pSwapChain, UINT BufferCount, U
 
 DWORD WINAPI ImguiHookThread(LPVOID lpParameter) {
 	bool WindowFocus = false;
-	while (!g_StopImguiHookThread && WindowFocus == false) {
+	while (!g_StopMutex && WindowFocus == false) {
 		DWORD ForegroundWindowProcessID;
 		GetWindowThreadProcessId(GetForegroundWindow(), &ForegroundWindowProcessID);
 		if (GetCurrentProcessId() == ForegroundWindowProcessID) {
@@ -176,13 +179,17 @@ DWORD WINAPI ImguiHookThread(LPVOID lpParameter) {
 	const TCHAR* guiWindowName = _T("UE Inspector");
 
 	bool InitHook = false;
-	while (!g_StopImguiHookThread && InitHook == false) {
+	while (!g_StopMutex && InitHook == false) {
 		if (DirectX11::Init(guiClassName, guiWindowName) == true) {
 		    CreateHook(8, (void**)&oIDXGISwapChainPresent, MJPresent);
 			CreateHook(13, (void**)&oIDXGIResizeBuffers, MJResizeBuffers);
 			CreateHook(12, (void**)&oID3D11DrawIndexed, MJDrawIndexed);
 			InitHook = true;
 		}
+	}
+
+	if (g_StopMutex) {
+		ReleaseMutex(g_StopMutex);
 	}
 	return 0;
 }

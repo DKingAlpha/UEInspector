@@ -24,6 +24,9 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="mem">
+      <UniqueIdentifier>{a67600f8-9e8d-4470-9599-bc9b207f8704}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\imgui\imgui_internal.h">
@@ -80,6 +83,31 @@
     <ClInclude Include="gui\MainMenu.h">
       <Filter>gui</Filter>
     </ClInclude>
+    <ClInclude Include="mem\Memory.hpp">
+      <Filter>mem</Filter>
+    </ClInclude>
+    <ClInclude Include="mem\Module.hpp">
+      <Filter>mem</Filter>
+    </ClInclude>
+    <ClInclude Include="mem\Patch.hpp">
+      <Filter>mem</Filter>
+    </ClInclude>
+    <ClInclude Include="mem\Pattern.hpp">
+      <Filter>mem</Filter>
+    </ClInclude>
+    <ClInclude Include="mem\Scan.hpp">
+      <Filter>mem</Filter>
+    </ClInclude>
+    <ClInclude Include="mem\String.hpp">
+      <Filter>mem</Filter>
+    </ClInclude>
+    <ClInclude Include="mem\Utility.hpp">
+      <Filter>mem</Filter>
+    </ClInclude>
+    <ClInclude Include="gui\UnrealInternal.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="dllmain.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\imgui\imgui_demo.cpp">
@@ -131,10 +159,37 @@
     <ClCompile Include="gui\MainMenu.cpp">
       <Filter>gui</Filter>
     </ClCompile>
+    <ClCompile Include="mem\Memory.cpp">
+      <Filter>mem</Filter>
+    </ClCompile>
+    <ClCompile Include="mem\Module.cpp">
+      <Filter>mem</Filter>
+    </ClCompile>
+    <ClCompile Include="mem\Patch.cpp">
+      <Filter>mem</Filter>
+    </ClCompile>
+    <ClCompile Include="mem\Pattern.cpp">
+      <Filter>mem</Filter>
+    </ClCompile>
+    <ClCompile Include="mem\Scan.cpp">
+      <Filter>mem</Filter>
+    </ClCompile>
+    <ClCompile Include="mem\String.cpp">
+      <Filter>mem</Filter>
+    </ClCompile>
+    <ClCompile Include="mem\Utility.cpp">
+      <Filter>mem</Filter>
+    </ClCompile>
+    <ClCompile Include="gui\UnrealInternal.cpp">
+      <Filter>gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\imgui\misc\debuggers\imgui.natvis">
       <Filter>imgui</Filter>
     </Natvis>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\README.md" />
   </ItemGroup>
 </Project>

@@ -3,6 +3,20 @@
 #include "dxhook/DX11Hook.h"
 #include "dxhook/DirectX11.h"
 
+static void PrepareForDllUnload()
+{
+	StopImguiHookThread();
+	DestroyHookAndMem();
+}
+
+static DWORD WINAPI UnloadDllCurrentThread(void* args)
+{
+	FreeLibraryAndExitThread(ProcessInfo::Module, 0);
+}
+
+void SelfUnload() {
+	CloseHandle(CreateThread(NULL, 0, UnloadDllCurrentThread, NULL, 0, 0));
+}
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 {
@@ -10,11 +24,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 	case DLL_PROCESS_ATTACH:
 		DisableThreadLibraryCalls(hModule);
 		ProcessInfo::Module = hModule;
-		CreateThread(0, 0, ImguiHookThread, 0, 0, 0);
+		CloseHandle(CreateThread(0, 0, ImguiHookThread, NULL, 0, 0));
 		break;
 	case DLL_PROCESS_DETACH:
-		DestroyHookAndMem();
-		StopImguiHookThread();
+		PrepareForDllUnload();
 		break;
 	case DLL_THREAD_ATTACH:
 		break;
