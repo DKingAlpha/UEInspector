@@ -87,6 +87,7 @@ HRESULT APIENTRY MJPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT F
 			ImGui_ImplDX11_Init(DirectX11Interface::Device, DirectX11Interface::DeviceContext);
 			ImGui_ImplDX11_CreateDeviceObjects();
 			io.ImeWindowHandle = ProcessInfo::Hwnd;
+			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 			ProcessInfo::WndProc = (WNDPROC)SetWindowLongPtr(ProcessInfo::Hwnd, GWLP_WNDPROC, (__int3264)(LONG_PTR)WndProc);
 			ImGui_Initialised = true;
 		}

@@ -7,53 +7,46 @@
 #include "UObject/UnrealType.h"
 
 #include "imgui.h"
+#include "ImGuiAddon.h"
 #include "../dllmain.h"
+
+#include "../mem/String.hpp"
 
 #include <tuple>
 #include <vector>
 #include <algorithm>
-
-// ===========================================================
-
-void DrawUEnum(UEnum* uenum)
-{
-}
-
-void DrawUStruct(UStruct* ustruct)
-{
-    if (ustruct->IsA<UFunction>()) {
-        // function
-    }
-    else if (ustruct->IsA<UClass>()) {
-        // class
-    }
-    else {
-        // struct
-    }
-}
+#include <map>
+#include <assert.h>
 
 class InfoUObjBase
 {
 public:
-    InfoUObjBase(UObjectBase* p) : ptr(p), name(get_full_name(p)) {
-
+    InfoUObjBase(UObjectBase* p) : ptr(p) {
+        auto type_name = get_full_name(p);
+        type = type_name.first;
+        name = type_name.second;
     }
 
     UObjectBase* ptr;
+    std::string type;
     std::string name;
 };
 
+
 namespace SearchContext {
+    static std::map<std::string, bool> all_types_map;
+    static std::vector<std::string> all_types;
     static std::vector<InfoUObjBase> all_uobjs;
     static std::vector<InfoUObjBase> filtered_uobjs;
-    int select_type = 0;
-    bool case_sensitive = true;
+    int selected_idx = -1;
+    char select_type[1024]{ 0 };
+    bool type_exact = false;
+    bool case_sensitive = false;
     char search_keyword[1024]{};
 
-
-    int selected_idx = -1;
     InfoUObjBase* Selected() {
-        if (selected_idx < 0) {
+        if (selected_idx < 0 || selected_idx >= filtered_uobjs.size()) {
+            // maybe outdated index. skip this time
             return nullptr;
         }
         return &filtered_uobjs[selected_idx];
@@ -63,6 +56,9 @@ namespace SearchContext {
 bool ReloadUObjects()
 {
     SearchContext::all_uobjs.clear();
+    SearchContext::all_types_map.clear();
+    SearchContext::all_types.clear();
+    SearchContext::selected_idx = -1;
     for (auto i = 0; i < get_GUObjectArray()->GetObjectArrayNum(); ++i) {
         auto obj_item = get_GUObjectArray()->IndexToObject(i);
 
@@ -71,10 +67,18 @@ bool ReloadUObjects()
         }
 
         auto obj = obj_item->Object;
-        if (DCast<UEnum*>(obj) || DCast<UStruct*>(obj)) {
-            SearchContext::all_uobjs.push_back({obj});
+        if (obj) {
+            InfoUObjBase iobj{ obj };
+            SearchContext::all_uobjs.push_back(iobj);
+            if (SearchContext::all_types_map.find(iobj.type) == SearchContext::all_types_map.end()) {
+                SearchContext::all_types_map[iobj.type] = true;
+                SearchContext::all_types.push_back(iobj.type);
+            }
+            
         }
     }
+    std::sort(SearchContext::all_types.begin(), SearchContext::all_types.end());
+    SearchContext::all_types.insert(SearchContext::all_types.begin(), "*");
     return true;
 }
 
@@ -82,6 +86,10 @@ int UpdateSearchResult(ImGuiInputTextCallbackData* data = nullptr)
 {
     SearchContext::filtered_uobjs.clear();
     std::string keyword = SearchContext::search_keyword;
+    if (data) {
+        // callback, SearchContext::search_keyword has not been updated, use data->Buf
+        keyword = data->Buf;
+    }
     if (!SearchContext::case_sensitive) {
         std::transform(keyword.begin(), keyword.end(), keyword.begin(), ::tolower);
     }
@@ -96,18 +104,21 @@ int UpdateSearchResult(ImGuiInputTextCallbackData* data = nullptr)
                 continue;
             }
         }
-        if (SearchContext::select_type == 1 && !DCast<UEnum*>(uobj.ptr)) {
-            continue;
+
+        if (SearchContext::select_type != nullptr && *SearchContext::select_type != 0 && *SearchContext::select_type != '*') {
+            // not empty, use it as type filter
+            if (SearchContext::type_exact) {
+                if (uobj.type != SearchContext::select_type) {
+                    continue;
+                }
+            }
+            else {
+                if (uobj.type.find(SearchContext::select_type) == uobj.type.npos) {
+                    continue;
+                }
+            }
         }
-        if (SearchContext::select_type == 2 && !DCast<UStruct*>(uobj.ptr)) {
-            continue;
-        }
-        if (SearchContext::select_type == 3 && !DCast<UFunction*>(uobj.ptr)) {
-            continue;
-        }
-        if (SearchContext::select_type == 4 && !DCast<UClass*>(uobj.ptr)) {
-            continue;
-        }
+
         SearchContext::filtered_uobjs.push_back(uobj);
     }
     return 0;
@@ -120,31 +131,34 @@ void DrawLeftPanel()
     float col_width = ImGui::GetColumnWidth();
 
     ImGui::BeginGroup();
-    ImGui::SetNextItemWidth(col_width * 0.3);
+    ImGui::SetNextItemWidth(col_width * 0.4);
     static bool first_shown = false;
     bool search_condition_changed = false;
-    if (ImGui::Combo("##Type", &SearchContext::select_type,
-        "ANY TYPES\0"
-        "UEnum\0"
-        "UStruct\0"
-        "- UFunction\0"
-        "- UClass\0")) {
+    // level 2 (base 0) headers are too complicated to include. Checking by ClassName
+
+    static ImGui::ComboFilterState filter_stat{ 0, false };
+
+    if (ImGui::ComboFilter("##type filter", SearchContext::select_type, sizeof(SearchContext::select_type),
+        SearchContext::all_types, filter_stat, ImGuiComboFlags_None)) {
+        search_condition_changed = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Checkbox("Exact", &SearchContext::type_exact)) {
         search_condition_changed = true;
     }
 
     ImGui::SameLine();
 
-    if (ImGui::Checkbox("CaseSensitive", &SearchContext::case_sensitive)) {
-        search_condition_changed = true;
-    }
-
-    ImGui::SameLine();
-
-    ImGui::SetNextItemWidth(col_width * 0.7 - ImGui::CalcTextSize("[x] CaseSensitive  ").x);
+    ImGui::SetNextItemWidth(col_width * 0.6 - ImGui::CalcTextSize("[ x ] Exact  [ x ] CaseSensitive ").x);
     if (ImGui::InputTextWithHint("##search keyword", "Search keyword ...", SearchContext::search_keyword, sizeof(SearchContext::search_keyword),
         ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackEdit, UpdateSearchResult, 0)) {
         search_condition_changed = true;
     }
+    ImGui::SameLine();
+    if (ImGui::Checkbox("CaseSensitive", &SearchContext::case_sensitive)) {
+        search_condition_changed = true;
+    }
+
 
     if (!first_shown || search_condition_changed) {
         first_shown = true;
@@ -156,8 +170,16 @@ void DrawLeftPanel()
 
     ImGui::BeginChild("Filtered Objects", { col_width, winsize.y - 80 }, false);
     ImGui::LabelText("##Filtered Objects Count", "Found: %d", SearchContext::filtered_uobjs.size());
-    if (ImGui::BeginListBox("##Filtered Objects", { col_width - 20, winsize.y - 120 })) {
+    // , { col_width - 20, winsize.y - 120 }
+    if (ImGui::BeginTable("##Filtered Objects Table", 2, ImGuiTableFlags_BordersInner | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable)) {
+        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Full Name", ImGuiTableColumnFlags_DefaultSort);
+        ImGui::TableHeadersRow();
         for (size_t i = 0; i < SearchContext::filtered_uobjs.size(); i++) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::Text(SearchContext::filtered_uobjs[i].type.c_str());
+            ImGui::TableNextColumn();
             if (ImGui::Selectable(SearchContext::filtered_uobjs[i].name.c_str(), SearchContext::selected_idx == i))
                 SearchContext::selected_idx = i;
             if (SearchContext::selected_idx == i) {
@@ -166,18 +188,18 @@ void DrawLeftPanel()
             if (ImGui::IsItemActive() || ImGui::IsItemHovered())
                 ImGui::SetTooltip("%s", SearchContext::filtered_uobjs[i].name.c_str());
         }
-        ImGui::EndListBox();
+        ImGui::EndTable();
     }
     ImGui::EndChild();
     ImGui::EndGroup();
 }
 
-void DrawUEnumInfo(UEnum* obj) {
+void DrawUEnumInfo(UEnum* uenum) {
     static bool show_hex = false;
     ImGui::Checkbox("HEX", &show_hex);
 
     std::string enum_cpp_form = "";
-    switch (obj->GetCppForm()) {
+    switch (uenum->GetCppForm()) {
     case UEnum::ECppForm::EnumClass:
         enum_cpp_form = "enum class";
         break;
@@ -192,23 +214,152 @@ void DrawUEnumInfo(UEnum* obj) {
 
     float col_width = ImGui::GetColumnWidth();
     ImGui::BeginChild("UEnum Definition", ImVec2(col_width - 20, 0), true);
-    for(auto& [fname, value] : obj->Names) {
+    for(auto& [fname, value] : uenum->Names) {
         ImGui::TextWrapped(show_hex ? "%s = 0x%llx" : "%s = %lld", narrow(fname).c_str(), value);
     }
     ImGui::EndChild();
 }
 
-void DrawUFunctionInfo(UFunction* obj) {
 
+bool DrawUFunction(UStruct* obj, UFunction* ufunc)
+{
+    std::string return_type = "void";
+    std::vector<std::pair<std::string, std::string>> args;
+    for (auto* field = ufunc->Children; field != nullptr; field = field->Next) {
+        if (!field->IsA<UProperty>()) {
+            assert(false);
+            continue;
+        }
+        auto prop = (UProperty*)field;
+        if (!prop->GetSize()) {
+            assert(false);
+            continue;
+        }
+        auto param_flags = prop->PropertyFlags;
+        auto param_name = narrow(prop->GetName());
+        auto param_type = uprop_type_to_str(prop);
+        if (param_type == "") {
+            param_type = "?";
+        }
+        if (param_flags & CPF_ReturnParm) {
+            return_type = param_type;
+        }
+        else {
+            if (param_flags & CPF_ReferenceParm) {
+                param_type += "&";
+            } else if (param_flags & CPF_OutParm) {
+                param_type += "*";
+            }
+            args.push_back({ param_type, param_name });
+        }
+    }
+    std::string args_str;
+    for (auto& [t, n] : args) {
+        args_str += t;
+        args_str += " ";
+        args_str += n;
+        args_str += ", ";
+    }
+    if (args_str.size() >= 2) {
+        if (args_str.back() == ' ') {
+            args_str.pop_back();
+        }
+        if (args_str.back() == ',') {
+            args_str.pop_back();
+        }
+    }
+    std::string signature = return_type.c_str();
+    signature += " ";
+    signature += narrow(ufunc->GetFName()).c_str();
+    signature += "(";
+    signature += args_str.c_str();
+    signature += ")";
+
+    if (ufunc->FunctionFlags & FUNC_Static) {
+        signature = "static " + signature;
+    }
+
+    bool selected = false;
+    return ImGui::Selectable(signature.c_str(), &selected);
 }
 
-void DrawUClassInfo(UClass* obj) {
+void DrawCallUFunction(UStruct* uobj, UFunction* ufunc)
+{
+    if (ufunc->FunctionFlags & FUNC_Static) {
+        uobj = nullptr;
+    }
+    ImGui::Text("%s->%s", uobj ? narrow(uobj->GetFName()).c_str() : "", narrow(ufunc->GetFName()).c_str());
+    ImGui::NewLine();
+    ImGui::Text("%p->%p", uobj ? uobj : 0, ufunc);
+    ImGui::NewLine();
+    ImGui::NewLine();
 
+    UFunctionInvoker invoker{ uobj, ufunc };
+    if (!invoker) {
+        ImGui::Text("Failed to parse function");
+    }
 }
 
-void DrawUStructInfo(UStruct* obj) {
+void DrawUPropertyInfoAsField(UProperty* uprop)
+{
+    if (!uprop->GetSize()) {
+        return;
+    }
 
+    auto prop_name = narrow(uprop->GetName());
+    ImGui::Text("%s", uprop_to_str(uprop).c_str());
+    TMap<FString, FString> values;
+    std::vector<std::string> input_datas;
+    uprop->GetNativePropertyValues(values);
+    for (auto& [s1, s2] : values) {
+        ImGui::Text("%s = %s", narrow(s1).c_str(), narrow(s1).c_str());
+    }
 }
+
+
+void DrawUStructInfo(UStruct* st) {
+    ImGui::TextColored({0.2f, 0.2f, 0.8f, 1.f}, "size: 0x%x, align:0x%x", st->GetStructureSize(), st->GetMinAlignment());
+
+    // properties
+    for (auto* field = st->Children; field != nullptr; field = field->Next) {
+        if (auto* uprop = DCast<UProperty*>(field)) {
+            DrawUPropertyInfoAsField(uprop);
+        }
+    }
+    static UStruct* calling_obj = nullptr;
+    static UFunction* calling_function = nullptr;
+    if (auto* ufunc = DCast<UFunction*>(st)) {
+        // static functions
+        if (DrawUFunction(st, ufunc)) {
+            calling_obj = nullptr;
+            calling_function = ufunc;
+        }
+    } else {
+        // class methods
+        for (auto* field = st->Children; field != nullptr; field = field->Next) {
+            if (UFunction* ufunc = DCast<UFunction*>(field)) {
+                if (DrawUFunction(st, ufunc)) {
+                    calling_obj = st;
+                    calling_function = ufunc;
+                }
+            }
+        }
+    }
+
+    static bool s_function_caller_opening = true;
+    if (calling_function) {
+        ImGui::SetNextWindowSize({ 800, 600 });
+        if (ImGui::Begin("Function Invoker", &s_function_caller_opening)) {
+            DrawCallUFunction(calling_obj, calling_function);
+            ImGui::End();
+        }
+        if (!s_function_caller_opening) {
+            calling_obj = nullptr;
+            calling_function = nullptr;
+        }
+    }
+}
+
 
 void DrawRightPanel()
 {
@@ -220,25 +371,34 @@ void DrawRightPanel()
     ImGui::TableNextColumn();
 
     float col_width = ImGui::GetColumnWidth();
+    ImVec2 winsize = ImGui::GetWindowSize();
 
     ImGui::BeginGroup();
-    ImGui::BeginChild("##View Detail", ImVec2(col_width, 0), true);
+    ImGui::BeginChild("##View Detail", ImVec2(col_width, winsize.y - 60), false);
 
-    ImGui::TextWrapped("Name: %s", selected->name.c_str());
+    ImGui::TextColored({0.f, 1.f, 0.f, 1.f}, "%s", selected->type.c_str());
+    ImGui::TextWrapped("%s", selected->name.c_str());
+    ImGui::NewLine();
     if (auto* uenum = DCast<UEnum*>(selected->ptr)) {
         DrawUEnumInfo(uenum);
     }
-    else if (auto* ufunction = DCast<UFunction*>(selected->ptr)) {
-        DrawUFunctionInfo(ufunction);
-    }
-    else if (auto* uclass = DCast<UClass*>(selected->ptr)) {
-        DrawUClassInfo(uclass);
+    else if (auto* uprop = DCast<UProperty*>(selected->ptr)) {
+        DrawUPropertyInfoAsField(uprop);
     }
     else if (auto* ustruct = DCast<UStruct*>(selected->ptr)) {
         DrawUStructInfo(ustruct);
     }
+    else if (kanan::strEndsWith(selected->type, "Actor")
+        || kanan::strEndsWith(selected->type, "Character")
+        || kanan::strEndsWith(selected->type, "Pawn")
+    ) {
+         // AActor and child classes
+         auto* obj = DCast<UObject*>(selected->ptr);
+         // uintptr_t process_event = GetVirtualFunctionAt(obj, UOBJECT_PROCESSEVENT_INDEX);
+         //obj->ProcessEvent(nullptr, nullptr);
+    }
     else {
-        assert(false);
+        // assert(false);
     }
 
     ImGui::EndChild();
@@ -265,7 +425,7 @@ bool DrawMainMenu()
     {
         ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
         if (ImGui::TreeNode("Object Viewer")) {
-            if (ImGui::BeginTable("##WorldViewerTable", 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable), 16.0f) {
+            if (ImGui::BeginTable("##WorldViewerTable", 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable)) {
                 ImGui::TableNextRow();
                 DrawLeftPanel();    // column left
                 DrawRightPanel();   // column right

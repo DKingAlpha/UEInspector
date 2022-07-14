@@ -27,27 +27,6 @@ wstring widen(string_view str) {
     return wideStr;
 }
 
-string formatString(const char* format, va_list args) {
-    va_list argsCopy{};
-
-    va_copy(argsCopy, args);
-
-    auto len = vsnprintf(nullptr, 0, format, argsCopy);
-
-    va_end(argsCopy);
-
-    if (len <= 0) {
-        return {};
-    }
-
-    string buffer{};
-
-    buffer.resize(len + 1, 0);
-    vsnprintf(buffer.data(), buffer.size(), format, args);
-    buffer.resize(buffer.size() - 1); // Removes the extra 0 vsnprintf adds.
-
-    return buffer;
-}
 
 std::vector<std::string> split(std::string str, const std::string& delim) {
     std::vector<std::string> pieces{};
@@ -61,4 +40,12 @@ std::vector<std::string> split(std::string str, const std::string& delim) {
 
     return pieces;
 }
+
+
+bool strEndsWith(std::string_view s, std::string_view sub)
+{
+    if (sub.size() > s.size()) return false;
+    return std::equal(sub.rbegin(), sub.rend(), s.rbegin());
+}
+
 } // namespace kanan

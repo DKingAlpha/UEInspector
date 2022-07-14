@@ -201,6 +201,7 @@
     <ClInclude Include="dllmain.h" />
     <ClInclude Include="dxhook\DirectX11.h" />
     <ClInclude Include="dxhook\DX11Hook.h" />
+    <ClInclude Include="gui\ImGuiAddon.h" />
     <ClInclude Include="gui\MainMenu.h" />
     <ClInclude Include="gui\UnrealInternal.h" />
     <ClInclude Include="mem\Memory.hpp" />
@@ -227,6 +228,7 @@
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="dxhook\DirectX11.cpp" />
     <ClCompile Include="dxhook\DX11Hook.cpp" />
+    <ClCompile Include="gui\ImGuiAddon.cpp" />
     <ClCompile Include="gui\MainMenu.cpp" />
     <ClCompile Include="gui\UnrealInternal.cpp" />
     <ClCompile Include="mem\Memory.cpp" />
