@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
     <DXSDK_DIR>D:\DirectXSDK</DXSDK_DIR>
-    <UE_SOURCE_DIR>D:\GitRepos\UnrealEngine\Engine\Source</UE_SOURCE_DIR>
+    <UE_SOURCE_DIR>G:\UE\UnrealEngine-4.21\Engine\Source</UE_SOURCE_DIR>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />

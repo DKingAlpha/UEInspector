@@ -1,14 +1,21 @@
 #include "Module.hpp"
 #include "String.hpp"
+#include <Windows.h>
+
+#include <libloaderapi.h>
 
 using namespace std;
 
 namespace kanan {
-optional<size_t> getModuleSize(const string& module) {
-    return getModuleSize(GetModuleHandle(widen(module).c_str()));
+void* getModuleHandle(const wchar_t* module_wstr) {
+    return GetModuleHandleW(module_wstr);
 }
 
-optional<size_t> getModuleSize(HMODULE module) {
+optional<size_t> getModuleSize(const string& module) {
+    return getModuleSize(getModuleHandle(widen(module).c_str()));
+}
+
+optional<size_t> getModuleSize(void* module) {
     if (module == nullptr) {
         return {};
     }

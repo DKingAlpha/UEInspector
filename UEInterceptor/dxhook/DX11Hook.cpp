@@ -183,8 +183,8 @@ DWORD WINAPI ImguiHookThread(LPVOID lpParameter) {
 	while (!g_StopMutex && InitHook == false) {
 		if (DirectX11::Init(guiClassName, guiWindowName) == true) {
 		    CreateHook(8, (void**)&oIDXGISwapChainPresent, MJPresent);
-			CreateHook(13, (void**)&oIDXGIResizeBuffers, MJResizeBuffers);
-			CreateHook(12, (void**)&oID3D11DrawIndexed, MJDrawIndexed);
+			// CreateHook(13, (void**)&oIDXGIResizeBuffers, MJResizeBuffers);  // fix crash on resize. not working on some game (FIXME)
+			// CreateHook(12, (void**)&oID3D11DrawIndexed, MJDrawIndexed);
 			InitHook = true;
 		}
 	}

@@ -4,14 +4,13 @@
 #include <optional>
 #include <string>
 
-#include <Windows.h>
-
 namespace kanan {
 //
 // Module utilities.
 //
+void* getModuleHandle(const wchar_t* module_wstr);
 std::optional<size_t> getModuleSize(const std::string& module);
-std::optional<size_t> getModuleSize(HMODULE module);
+std::optional<size_t> getModuleSize(void* module);
 
 // Note: This function doesn't validate the dll's headers so make sure you've
 // done so before calling it.

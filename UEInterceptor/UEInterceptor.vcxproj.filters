@@ -111,6 +111,12 @@
     <ClInclude Include="gui\ImGuiAddon.h">
       <Filter>gui</Filter>
     </ClInclude>
+    <ClInclude Include="..\minhook\include\MinHook.h">
+      <Filter>minhook</Filter>
+    </ClInclude>
+    <ClInclude Include="gui\NoUEUtil.h">
+      <Filter>gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\imgui\imgui_demo.cpp">
@@ -187,6 +193,9 @@
       <Filter>gui</Filter>
     </ClCompile>
     <ClCompile Include="gui\ImGuiAddon.cpp">
+      <Filter>gui</Filter>
+    </ClCompile>
+    <ClCompile Include="gui\NoUEUtil.cpp">
       <Filter>gui</Filter>
     </ClCompile>
   </ItemGroup>

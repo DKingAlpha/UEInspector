@@ -12,11 +12,14 @@
 
 
 // shipping
-constexpr auto GUOBJECTARRAY_PAT = "48 8D 0D ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 33 FF 48 8B C8";  // UE4Game (test)
+constexpr auto GUOBJECTARRAY_PAT = "48 8D 05 ? ? ? ? 48 89 71 10 45 84 C0 48 89 01"; // Tower Unite
+// constexpr auto GUOBJECTARRAY_PAT = "48 8D 0D ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 33 FF 48 8B C8";  // UE4Game (test)
 /// constexpr auto GUOBJECTARRAY_PAT = "48 8D 0D ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 48 8B D6"; // pavlov
+
 constexpr auto FNAME_TOSTRING_PAT = "48 89 5C 24 08 57 48 83 EC ? 83 79 04 00";
 
-constexpr auto GMALLOC_PAT = "4C 8B D1 48 8B 0D ? ? ? ? 48 85 C9 75 ? 49 8B CA E9"; //  UE4Game (test)
+constexpr auto GMALLOC_PAT = "41 8B D8 48 8B 0D ? ? ? ? 48 8B FA 48 85 C9"; // Tower Unite
+// constexpr auto GMALLOC_PAT = "4C 8B D1 48 8B 0D ? ? ? ? 48 85 C9 75 ? 49 8B CA E9"; //  UE4Game (test)
 // constexpr auto GMALLOC_PAT = "41 8B D8 48 8B 0D ? ? ? ? 48 8B FA 48 85 C9 75 ? E8"; //  pavlov
 
 
@@ -62,7 +65,7 @@ FUObjectArray* get_GUObjectArray() {
 }
 
 
-std::pair<std::string, std::string> get_full_name(UObjectBase* obj) {
+std::tuple<std::string, std::string, std::string> get_full_name(UObjectBase* obj) {
     if (obj == nullptr) {
         return {};
     }
@@ -74,12 +77,13 @@ std::pair<std::string, std::string> get_full_name(UObjectBase* obj) {
     }
 
     auto obj_name = narrow(obj->GetFName());
+    std::string outer_name = "";
 
     for (auto outer = obj->GetOuter(); outer != nullptr; outer = outer->GetOuter()) {
-        obj_name = narrow(outer->GetFName()) + '.' + obj_name;
+        outer_name = narrow(outer->GetFName()) + "." + outer_name;
     }
 
-    return { narrow(c->GetFName()),obj_name };
+    return {outer_name, narrow(c->GetFName()),obj_name };
 }
 
 UObjectBase* find_object(const char* type_name, const char* obj_full_name, bool cache) {
@@ -98,13 +102,19 @@ UObjectBase* find_object(const char* type_name, const char* obj_full_name, bool 
     for (auto i = 0; i < obj_array->GetObjectArrayNum(); ++i) {
         if (auto obj_item = obj_array->IndexToObject(i)) {
             if (auto obj_base = obj_item->Object) {
-                auto [_type, _name] = get_full_name(obj_base);
-                if (_type == type_name && _name == obj_full_name) {
+                auto [_outer, _type, _name] = get_full_name(obj_base);
+                if (_type == type_name && (_outer + _name) == obj_full_name) {
                     obj_map[concated_name] = obj_base;
                     return obj_base;
                 }
             }
         }
+    }
+
+    if (cache) {
+        // retry without cache
+        obj_map.clear();
+        return find_object(type_name, obj_full_name, false);
     }
 
     return nullptr;
@@ -219,6 +229,11 @@ UClass* UEnumProperty::GetPrivateStaticClass() {
     return (UClass*)find_object("Class", "/Script/CoreUObject.EnumProperty");
 }
 
+UClass* UNumericProperty::GetPrivateStaticClass() {
+    return (UClass*)find_object("Class", "/Script/CoreUObject.NumericProperty");
+}
+
+
 FString FName::ToString() const {
     FString out;
 
@@ -235,9 +250,15 @@ FString FName::ToString() const {
 }
 
 std::string uprop_to_str(UProperty* uprop) {
-    return  kanan::stringFormat("%s %s; // off:0x%x, size:0x%x, align:0x%x",
+    DynProperty dynprop(uprop);
+    std::string value = dynprop.ToString();
+    if (value.size()) {
+        value = " = " + value;
+    }
+    return  kanan::stringFormat("%s %s%s; // off:0x%x, size:0x%x, align:0x%x",
         uprop_type_to_str(uprop).c_str(),
         narrow(uprop->GetName()).c_str(),
+        value.c_str(),
         uprop->GetOffset_ForUFunction(),
         uprop->GetSize(),
         uprop->GetMinAlignment()
@@ -365,14 +386,10 @@ std::string uprop_type_to_str(UProperty* fprop) {
     return narrow(fprop->GetClass()->GetName());
 }
 
-UFunctionInvoker::UFunctionInvoker(UStruct* uobj, UFunction* ufunc) :
-    m_this(uobj), m_f(ufunc), m_is_static(false), m_has_returntype(false),
+UFunctionInvoker::UFunctionInvoker(UFunction* ufunc) :
+   m_f(ufunc), m_is_static(false), m_has_returntype(false),
     m_return_type({}), m_arguments({}), m_is_valid(false)
 {
-    if (ufunc->FunctionFlags & FUNC_Static) {
-        m_this = nullptr;
-    }
-
     for (auto* field = ufunc->Children; field != nullptr; field = field->Next) {
         if (!field->IsA<UProperty>()) {
             assert(false);
@@ -388,12 +405,11 @@ UFunctionInvoker::UFunctionInvoker(UStruct* uobj, UFunction* ufunc) :
         }
 
         bool is_ptr_or_ref = false;
-        if (param_flags & CPF_ReferenceParm) {
+        if ((param_flags & CPF_ReferenceParm) || (param_flags & CPF_OutParm)) {
             param_type += "&";
             is_ptr_or_ref = true;
         }
-        if (param_flags & CPF_OutParm) {
-            param_type += "*";
+        if (param_type.rfind("*") != param_type.npos || param_name.rfind("*") != param_name.npos) {
             is_ptr_or_ref = true;
         }
         UFuncParamInfo info{ prop, is_ptr_or_ref, param_type, param_name };
