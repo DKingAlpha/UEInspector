@@ -1,0 +1,53 @@
+{
+    "env": {
+        "UE_ROOT_DIR": "G:\\UE\\UnrealEngine-4.21"
+    },
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}\\build\\_deps\\imgui_project-src",
+                "${workspaceFolder}\\build\\_deps\\imgui_project-src\\backends",
+                "${workspaceFolder}\\build\\_deps\\minhook_project-src\\include",
+                "${workspaceFolder}\\build\\_deps\\minhook_project-src\\src",
+                "${env:UE_ROOT_DIR}\\Engine\\Source\\Runtime\\Core\\Public",
+                "${env:UE_ROOT_DIR}\\Engine\\Source\\Runtime\\Core\\Public\\UObject",
+                "${env:UE_ROOT_DIR}\\Engine\\Source\\Runtime\\CoreUObject\\Public",
+                "${env:UE_ROOT_DIR}\\Engine\\Source\\Runtime\\TraceLog\\Public"
+            ],
+            "defines": [
+                "UE_BUILD_MINIMAL=1",
+                "COREUOBJECT_VTABLE=",
+                "UBT_COMPILED_PLATFORM=Windows",
+                "UE_BUILD_SHIPPING=1",
+                "WITH_EDITOR=0",
+                "WITH_EDITORONLY_DATA=0",
+                "WITH_ENGINE=1",
+                "WITH_UNREAL_DEVELOPER_TOOLS=0",
+                "WITH_PLUGIN_SUPPORT=0",
+                "WITH_SERVER_CODE=0",
+                "IS_MONOLITHIC=1",
+                "IS_PROGRAM=1",
+                "PLATFORM_WINDOWS",
+                "PLATFORM_64BITS",
+                "CORE_API=",
+                "COREUOBJECT_API=",
+                "NOMINMAX",
+                "WIN32",
+                "_DEBUG",
+                "UEINTERCEPTOR_EXPORTS",
+                "_WINDOWS",
+                "_USRDLL",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.22621.0",
+            "compilerPath": "C:/Program Files/Microsoft Visual Studio/2022/Professional/VC/Tools/MSVC/14.32.31326/bin/Hostx64/x64/cl.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}

@@ -663,8 +663,8 @@ void DrawUStructInfo(UObjectBase* uobj, UStruct* st) {
         ImGui::SetNextWindowSize({ 600, 300 }, ImGuiCond_FirstUseEver);
         if (ImGui::Begin("Function Invoker", &s_function_caller_opening)) {
             DrawCallUFunction(SearchContext::calling_function);
-            ImGui::End();
         }
+        ImGui::End();
         if (!s_function_caller_opening) {
             SearchContext::calling_function = nullptr;
         }
