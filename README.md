@@ -17,7 +17,6 @@
 
 ## Dang! How to use this?
 
-
 1. Find an UE game
 2. Build UEInspector for that game (See next section)
 3. Inject compiled UEInspector to game
@@ -31,8 +30,8 @@
 1. git clone **--recursive** <THIS REPO>
 2. Download source code of Unreal Engine
 3. Install DirectX SDK, update variables in `UEInspector/EnvSetup.props`
-4. Open sln, try to build.
-5. Fix UE source error popping up. May be 5 places, more or less.
+4. Edit `UEInspector/EnvSetup.props`, open sln, try to build.
+5. Fix UE source error popping up. May be 5 places, more or less. (See `patches/`)
 6. Update patterns in `UnrealInternal.cpp`
 7. Build & Inject!
 

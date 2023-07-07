@@ -1,0 +1,40 @@
+From cf5eefe478dfdde9714a7a7b4d7ff6980f56ca7f Mon Sep 17 00:00:00 2001
+From: DKing <dkingchn@gmail.com>
+Date: Fri, 7 Jul 2023 18:44:12 +0800
+Subject: [PATCH] support UEInspector
+
+---
+ Engine/Source/Runtime/CoreUObject/Public/UObject/Class.h      | 2 +-
+ Engine/Source/Runtime/CoreUObject/Public/UObject/UnrealType.h | 1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/Engine/Source/Runtime/CoreUObject/Public/UObject/Class.h b/Engine/Source/Runtime/CoreUObject/Public/UObject/Class.h
+index 8a31296709..1d34c80f23 100644
+--- a/Engine/Source/Runtime/CoreUObject/Public/UObject/Class.h
++++ b/Engine/Source/Runtime/CoreUObject/Public/UObject/Class.h
+@@ -1884,9 +1884,9 @@ public:
+ 	virtual void BeginDestroy() override;
+ 	// End of UObject interface.
+ 
+-protected:
+ 	/** List of pairs of all enum names and values. */
+ 	TArray<TPair<FName, int64>> Names;
++protected:
+ 
+ 	/** How the enum was originally defined. */
+ 	ECppForm CppForm;
+diff --git a/Engine/Source/Runtime/CoreUObject/Public/UObject/UnrealType.h b/Engine/Source/Runtime/CoreUObject/Public/UObject/UnrealType.h
+index 09d39f3e15..aa51fddf8f 100644
+--- a/Engine/Source/Runtime/CoreUObject/Public/UObject/UnrealType.h
++++ b/Engine/Source/Runtime/CoreUObject/Public/UObject/UnrealType.h
+@@ -1718,6 +1718,7 @@ class COREUOBJECT_API UBoolProperty : public UProperty
+ 	// Variables.
+ private:
+ 
++public:
+ 	/** Size of the bitfield/bool property. Equal to ElementSize but used to check if the property has been properly initialized (0-8, where 0 means uninitialized). */
+ 	uint8 FieldSize;
+ 	/** Offset from the memeber variable to the byte of the property (0-7). */
+-- 
+2.39.2.windows.1
+
